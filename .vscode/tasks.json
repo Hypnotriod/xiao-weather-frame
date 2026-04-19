@@ -1,0 +1,19 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Upload UF2 firmware",
+			"type": "shell",
+			"command": "cp",
+			"args": [
+				"build/${fileWorkspaceFolderBasename}/zephyr/zephyr.uf2",
+				"D:\\"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"detail": "https://forum.seeedstudio.com/t/cant-program-xiao-nrf52840-sense-using-nrf-connect-sdk-in-vscode/284577/63"
+		}
+	]
+}

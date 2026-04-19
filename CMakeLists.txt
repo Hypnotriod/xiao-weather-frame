@@ -3,4 +3,5 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 
 project(xiao-weather-frame)
 
-target_sources(app PRIVATE src/main.c)
+file(GLOB src src/*.c)
+target_sources(app PRIVATE ${src})
