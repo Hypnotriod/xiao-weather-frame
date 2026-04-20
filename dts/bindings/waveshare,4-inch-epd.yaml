@@ -1,0 +1,30 @@
+description: Waveshare 4.2inch e-Paper display module bindings
+
+compatible: "waveshare,4-inch-epd"
+
+include: [spi-device.yaml]
+
+properties:
+  cs-gpios:
+    type: phandle-array
+    required: true
+    description: |
+      CS (chip select) gpio pin
+
+  res-gpios:
+    type: phandle-array
+    required: true
+    description: |
+      RES (reset) gpio pin
+
+  dc-gpios:
+    type: phandle-array
+    required: true
+    description: |
+      DC (data/command) gpio pin
+
+  busy-gpios:
+    type: phandle-array
+    required: true
+    description: |
+      BUSY (busy) gpio 

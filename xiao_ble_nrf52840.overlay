@@ -13,3 +13,18 @@
 &pwm0 {
     status = "disabled";
 };
+
+&spi2 {
+    status = "okay";
+
+    waveshare_epd_dev: waveshare_epd_dev@0 {
+        compatible = "waveshare,4-inch-epd";
+        status = "okay";
+        reg = <0x0>;
+        spi-max-frequency = <8000000>;
+        cs-gpios = <&gpio0 2 GPIO_ACTIVE_LOW>;
+        dc-gpios = <&gpio0 3 GPIO_ACTIVE_HIGH>;
+        res-gpios = <&gpio0 28 GPIO_ACTIVE_LOW>;
+        busy-gpios = <&gpio0 29 GPIO_ACTIVE_HIGH>;
+    };
+};
