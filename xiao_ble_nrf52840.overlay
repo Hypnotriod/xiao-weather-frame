@@ -28,3 +28,11 @@
         busy-gpios = <&gpio0 29 GPIO_ACTIVE_HIGH>;
     };
 };
+
+&i2c1 {
+    bme280_dev: bme280@76 {
+        compatible = "bosch,bme280";
+        status = "okay";
+        reg = <0x76>;
+    };
+};
