@@ -1,4 +1,5 @@
 ## xiao-weather-frame
+![xiao-weather-frame](xiao-weather-frame.jpg)
 
 Weather Display Frame based on the XIAO nRF52840 dev board, Waveshare 4.2inch e-Paper Display module and bme280 (temperature/humidity/pressure) sensor.  
 * Implements Bluetooth LE Central role to communicate with the external [XIAO nRF52840 and bme280 based BLE weather station peripheral device](https://github.com/Hypnotriod/xiao-sense-bme280) over Environmental Sensing Service (ESS) and Battery Service (BAS).  
