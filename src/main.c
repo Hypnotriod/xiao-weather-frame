@@ -120,6 +120,9 @@ static void remote_pressure_callback(int16_t value)
 static void remote_connection_callback(bool connected)
 {
     remote_connection_established = connected;
+    if (!connected) {
+        remote_values_ready_mask = 0;
+    }
 }
 
 static void draw_icons(void)
@@ -174,11 +177,8 @@ static void draw_local_values(void)
     epd_draw_string(buff, &FontRobotoBold40, frame_buffer, 242, 160, EPD_COLOR_BLACK, false);
 }
 
-int main(void)
+int initialize(void)
 {
-    int epd_refresh_timeout_ms = 0;
-    bool connected = false;
-    bool charging = false;
     int err;
 
     err = bt_enable(NULL);
@@ -244,9 +244,32 @@ int main(void)
     bt_central_register_connection_callback(remote_connection_callback);
     bt_central_start_scan();
 
+    return 0;
+}
+
+int main(void)
+{
+    int err;
+    int epd_refresh_timeout_ms = 0;
+    bool connected = false;
+    bool charging = false;
+    bool can_display_remote_values = false;
+
+    err = initialize();
+    if (err) {
+        return err;
+    }
+
     while (1) {
-        if (connected != remote_connection_established && REMOTE_VALUES_ARE_READY()) {
-            connected = remote_connection_established;
+        if (REMOTE_VALUES_ARE_READY()) {
+            can_display_remote_values = true;
+        }
+        if (!connected && remote_connection_established && REMOTE_VALUES_ARE_READY()) {
+            connected = true;
+            epd_refresh_timeout_ms = 0;
+        }
+        if (connected && !remote_connection_established) {
+            connected = false;
             epd_refresh_timeout_ms = 0;
         }
         if (charging != local_battery_is_charging) {
@@ -260,7 +283,7 @@ int main(void)
                 return -EIO;
             }
             epd_fill(frame_buffer, EPD_COLOR_WHITE);
-            if (REMOTE_VALUES_ARE_READY()) {
+            if (can_display_remote_values) {
                 draw_remote_values();
             }
             draw_local_values();
