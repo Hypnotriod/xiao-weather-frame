@@ -8,6 +8,8 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/byteorder.h>
 
+#include "sensor.h"
+
 LOG_MODULE_REGISTER(bt_central, LOG_LEVEL_INF);
 
 static const struct bt_uuid* UUID_BAS = BT_UUID_BAS;
