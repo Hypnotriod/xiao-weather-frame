@@ -34,8 +34,9 @@ static volatile uint8_t remote_battery_level;
 static volatile int16_t remote_temperature;
 static volatile int16_t remote_humidity;
 static volatile int16_t remote_pressure;
+static volatile bool remote_connection_established = false;
 
-#define REMOTE_VALUES_ARE_NOT_READY() remote_values_ready_mask != 0x0F
+#define REMOTE_VALUES_ARE_READY() remote_values_ready_mask == 0x0F
 
 static void battery_voltage_sample_once()
 {
@@ -118,22 +119,20 @@ static void remote_pressure_callback(int16_t value)
 
 static void remote_connection_callback(bool connected)
 {
-    if (!connected) {
-        remote_values_ready_mask = 0;
-    }
+    remote_connection_established = connected;
 }
 
 static void draw_icons(void)
 {
-    epd_draw_icon(&IconBattery, frame_buffer, 198, 10, EPD_COLOR_BLACK, false);
-    epd_draw_icon(&IconTemperature, frame_buffer, 198, 80, EPD_COLOR_BLACK, false);
-    epd_draw_icon(&IconHumidity, frame_buffer, 190, 150, EPD_COLOR_BLACK, false);
-    epd_draw_icon(&IconPressure, frame_buffer, 260, 220, EPD_COLOR_BLACK, false);
+    epd_draw_icon(&IconBattery, frame_buffer, 198, 10, EPD_COLOR_BLACK, true);
+    epd_draw_icon(&IconTemperature, frame_buffer, 198, 80, EPD_COLOR_BLACK, true);
+    epd_draw_icon(&IconHumidity, frame_buffer, 190, 150, EPD_COLOR_BLACK, true);
+    epd_draw_icon(&IconPressure, frame_buffer, 260, 220, EPD_COLOR_BLACK, true);
+    if (!remote_connection_established) {
+        epd_draw_icon(&IconConnection, frame_buffer, 10, 22, EPD_COLOR_BLACK, true);
+    }
     if (local_battery_is_charging) {
-        epd_draw_icon(&IconCharge, frame_buffer, 358, 22, EPD_COLOR_BLACK, false);
-    } else {
-        epd_draw_rectangle(frame_buffer, 358, 22, 358 + IconCharge.width, 22 + IconCharge.height, EPD_COLOR_WHITE,
-                           true);
+        epd_draw_icon(&IconCharge, frame_buffer, 358, 22, EPD_COLOR_BLACK, true);
     }
 }
 
@@ -177,6 +176,9 @@ static void draw_local_values(void)
 
 int main(void)
 {
+    int epd_refresh_timeout_ms = 0;
+    bool connected = false;
+    bool charging = false;
     int err;
 
     err = bt_enable(NULL);
@@ -221,11 +223,6 @@ int main(void)
         return err;
     }
 
-    if (epd_init()) {
-        LOG_ERR("Unable to initialize e-Paper display");
-        return -EIO;
-    }
-
     bme280_register_temperature_callback(local_temperature_callback);
     bme280_register_humidity_callback(local_humidity_callback);
     bme280_register_pressure_callback(local_pressure_callback);
@@ -247,32 +244,41 @@ int main(void)
     bt_central_register_connection_callback(remote_connection_callback);
     bt_central_start_scan();
 
-    epd_fill(frame_buffer, EPD_COLOR_WHITE);
-
     while (1) {
-        if (REMOTE_VALUES_ARE_NOT_READY()) {
-            epd_init();
-            epd_draw_string("Connecting...", &Font16, frame_buffer, 5, 5, EPD_COLOR_BLACK, false);
-            draw_icons();
-            draw_local_values();
-            epd_display(frame_buffer);
-            epd_sleep();
-            while (REMOTE_VALUES_ARE_NOT_READY()) {
-                gpio_pin_set(led0.port, led0.pin, 1);
-                k_msleep(500);
-                gpio_pin_set(led0.port, led0.pin, 0);
-                k_msleep(500);
-            }
+        if (connected != remote_connection_established && REMOTE_VALUES_ARE_READY()) {
+            connected = remote_connection_established;
+            epd_refresh_timeout_ms = 0;
+        }
+        if (charging != local_battery_is_charging) {
+            charging = local_battery_is_charging;
+            epd_refresh_timeout_ms = 0;
         }
 
-        epd_init();
-        epd_fill(frame_buffer, EPD_COLOR_WHITE);
-        draw_remote_values();
-        draw_icons();
-        draw_local_values();
-        epd_display(frame_buffer);
-        epd_sleep();
-        k_msleep(EPD_REFRESH_TIME_MS);
+        if (epd_refresh_timeout_ms == 0) {
+            if (epd_init()) {
+                LOG_ERR("Unable to initialize e-Paper display");
+                return -EIO;
+            }
+            epd_fill(frame_buffer, EPD_COLOR_WHITE);
+            if (REMOTE_VALUES_ARE_READY()) {
+                draw_remote_values();
+            }
+            draw_local_values();
+            draw_icons();
+            epd_display(frame_buffer);
+            epd_sleep();
+            epd_refresh_timeout_ms = EPD_REFRESH_TIME_MS;
+        }
+
+        if (!connected) {
+            for (int i = 0; i < 4; i++) {
+                gpio_pin_toggle_dt(&led0);
+                k_msleep(500);
+            }
+        } else {
+            k_msleep(2000);
+        }
+        epd_refresh_timeout_ms -= 2000;
     }
 
     return 0;
