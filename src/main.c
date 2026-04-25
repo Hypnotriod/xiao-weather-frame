@@ -12,7 +12,9 @@
 #include "icons.h"
 #include "sensor.h"
 
-#define EPD_REFRESH_TIME_MS 30000
+#define EPD_MAX_UPDATE_DELAY_MS 30000
+#define EPD_MIN_UPDATE_DELAY_MS 2000
+#define CONNECTION_LED_BLINK_RATE 4
 #define SAMPLING_INTERVAL_MS 15000
 #define PRESSURE_OFFSET 37
 
@@ -267,7 +269,7 @@ int initialize(void)
 int main(void)
 {
     int err;
-    int epd_refresh_timeout_ms = 0;
+    int epd_update_ticker = 0;
     bool connected = false;
     bool charging = false;
     bool can_display_remote_values = false;
@@ -285,14 +287,14 @@ int main(void)
         }
         if (connected != remote_values_are_ready) {
             connected = remote_values_are_ready;
-            epd_refresh_timeout_ms = 0;
+            epd_update_ticker = 0;
         }
         if (charging != local_battery_is_charging) {
             charging = local_battery_is_charging;
-            epd_refresh_timeout_ms = 0;
+            epd_update_ticker = 0;
         }
 
-        if (epd_refresh_timeout_ms == 0) {
+        if (epd_update_ticker == 0) {
             if (epd_init()) {
                 LOG_ERR("Unable to initialize e-Paper display");
                 return -EIO;
@@ -311,18 +313,19 @@ int main(void)
             }
             epd_display(frame_buffer);
             epd_sleep();
-            epd_refresh_timeout_ms = EPD_REFRESH_TIME_MS;
+            epd_update_ticker = EPD_MAX_UPDATE_DELAY_MS / EPD_MIN_UPDATE_DELAY_MS;
         }
 
         if (!connected) {
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < CONNECTION_LED_BLINK_RATE; i++) {
                 gpio_pin_toggle_dt(&led0);
-                k_msleep(500);
+                k_msleep(EPD_MIN_UPDATE_DELAY_MS / CONNECTION_LED_BLINK_RATE);
             }
         } else {
-            k_msleep(2000);
+            gpio_pin_set_dt(&led0, 0);
+            k_msleep(EPD_MIN_UPDATE_DELAY_MS);
         }
-        epd_refresh_timeout_ms -= 2000;
+        epd_update_ticker--;
     }
 
     return 0;
