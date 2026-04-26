@@ -16,7 +16,7 @@
 #define EPD_MIN_UPDATE_DELAY_MS 2000
 #define CONNECTION_LED_BLINK_RATE 4
 #define SAMPLING_INTERVAL_MS 15000
-#define PRESSURE_OFFSET 37
+#define PRESSURE_OFFSET_HPA 37
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
@@ -24,12 +24,12 @@ static const struct gpio_dt_spec led0 = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
 
 static uint8_t frame_buffer[EPD_FRAME_BUFFER_SIZE] = {0};
 
-static volatile bool local_battery_is_charging = false;
-static volatile uint16_t local_battery_last_millivolt = 0;
-static volatile uint8_t local_battery_level = 0;
-static volatile int16_t local_temperature = 0;
-static volatile int16_t local_pressure = 0;
-static volatile int16_t local_humidity = 0;
+static volatile bool local_battery_is_charging;
+static volatile uint16_t local_battery_last_millivolt;
+static volatile uint8_t local_battery_level;
+static volatile int16_t local_temperature;
+static volatile int16_t local_pressure;
+static volatile int16_t local_humidity;
 
 static volatile uint8_t remote_values_ready_mask = 0;
 static volatile uint8_t remote_battery_level;
@@ -171,7 +171,7 @@ static void draw_remote_values(void)
     sprintf(buff, "%3i.%02i%%", SENSOR_VAL_FORMAT(hum));
     epd_draw_string(buff, &FontRobotoBold40, frame_buffer, 10, 160, EPD_COLOR_BLACK, false);
 
-    sprintf(buff, "%4ihPa", press + PRESSURE_OFFSET);
+    sprintf(buff, "%4ihPa", press + PRESSURE_OFFSET_HPA);
     epd_draw_string(buff, &FontRobotoBold40, frame_buffer, 70, 230, EPD_COLOR_BLACK, false);
 }
 
