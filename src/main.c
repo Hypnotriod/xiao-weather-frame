@@ -211,7 +211,7 @@ int initialize(void)
     err = bme280_init();
     if (err) {
         LOG_ERR("Failed to initialize bme280 device (error %d)", err);
-        return -ENXIO;
+        return err;
     }
 
     err = battery_init();
