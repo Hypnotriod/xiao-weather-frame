@@ -15,5 +15,7 @@ extern const sICON IconHumidity;
 extern const sICON IconPressure;
 extern const sICON IconCharge;
 extern const sICON IconConnection;
+extern const sICON IconRemote;
+extern const sICON IconLocal;
 
 #endif  //__ICONS_H__

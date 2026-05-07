@@ -138,20 +138,22 @@ static void remote_connection_callback(bool connected)
 
 static void draw_static_icons(void)
 {
-    epd_draw_icon(&IconBattery, frame_buffer, 198, 10, EPD_COLOR_BLACK, true);
-    epd_draw_icon(&IconTemperature, frame_buffer, 198, 80, EPD_COLOR_BLACK, true);
-    epd_draw_icon(&IconHumidity, frame_buffer, 190, 150, EPD_COLOR_BLACK, true);
-    epd_draw_icon(&IconPressure, frame_buffer, 260, 220, EPD_COLOR_BLACK, true);
+    epd_draw_icon(&IconBattery, frame_buffer, 184, 10, EPD_COLOR_BLACK, true);
+    epd_draw_icon(&IconTemperature, frame_buffer, 184, 80, EPD_COLOR_BLACK, true);
+    epd_draw_icon(&IconHumidity, frame_buffer, 176, 150, EPD_COLOR_BLACK, true);
+    epd_draw_icon(&IconPressure, frame_buffer, 280, 220, EPD_COLOR_BLACK, true);
+    epd_draw_icon(&IconRemote, frame_buffer, 2, 8, EPD_COLOR_BLACK, true);
+    epd_draw_icon(&IconLocal, frame_buffer, 332, 8, EPD_COLOR_BLACK, true);
 }
 
 static void draw_connection_icon(void)
 {
-    epd_draw_icon(&IconConnection, frame_buffer, 10, 22, EPD_COLOR_BLACK, true);
+    epd_draw_icon(&IconConnection, frame_buffer, 10, 250, EPD_COLOR_BLACK, true);
 }
 
 static void draw_charging_icon(void)
 {
-    epd_draw_icon(&IconCharge, frame_buffer, 358, 22, EPD_COLOR_BLACK, true);
+    epd_draw_icon(&IconCharge, frame_buffer, 358, 250, EPD_COLOR_BLACK, true);
 }
 
 static void draw_remote_values(void)
@@ -162,17 +164,17 @@ static void draw_remote_values(void)
     int16_t hum = remote_humidity;
     int16_t press = remote_pressure;
 
-    sprintf(buff, "%6u%%", batt);
-    epd_draw_string(buff, &FontRobotoBold40, frame_buffer, 10, 20, EPD_COLOR_BLACK, false);
+    sprintf(buff, "%5u%%", batt);
+    epd_draw_string(buff, &FontRobotoBold40, frame_buffer, 21, 20, EPD_COLOR_BLACK, false);
 
-    sprintf(buff, "%+3i.%02iC", SENSOR_VAL_FORMAT(temp));
-    epd_draw_string(buff, &FontRobotoBold40, frame_buffer, 10, 90, EPD_COLOR_BLACK, false);
+    sprintf(buff, "%+3i.%iC", SENSOR_VAL_FORMAT_SHORT(temp));
+    epd_draw_string(buff, &FontRobotoBold40, frame_buffer, 21, 90, EPD_COLOR_BLACK, false);
 
-    sprintf(buff, "%3i.%02i%%", SENSOR_VAL_FORMAT(hum));
-    epd_draw_string(buff, &FontRobotoBold40, frame_buffer, 10, 160, EPD_COLOR_BLACK, false);
+    sprintf(buff, "%3i.%i%%", SENSOR_VAL_FORMAT_SHORT(hum));
+    epd_draw_string(buff, &FontRobotoBold40, frame_buffer, 21, 160, EPD_COLOR_BLACK, false);
 
     sprintf(buff, "%4ihPa", press + PRESSURE_OFFSET_HPA);
-    epd_draw_string(buff, &FontRobotoBold40, frame_buffer, 70, 230, EPD_COLOR_BLACK, false);
+    epd_draw_string(buff, &FontRobotoBold40, frame_buffer, 90, 230, EPD_COLOR_BLACK, false);
 }
 
 static void draw_local_values(void)
@@ -183,13 +185,13 @@ static void draw_local_values(void)
     int16_t hum = local_humidity;
 
     sprintf(buff, "%u%%", batt);
-    epd_draw_string(buff, &FontRobotoBold40, frame_buffer, 242, 20, EPD_COLOR_BLACK, false);
+    epd_draw_string(buff, &FontRobotoBold40, frame_buffer, 228, 20, EPD_COLOR_BLACK, false);
 
     sprintf(buff, "%+i.%iC", SENSOR_VAL_FORMAT_SHORT(temp));
-    epd_draw_string(buff, &FontRobotoBold40, frame_buffer, 242, 90, EPD_COLOR_BLACK, false);
+    epd_draw_string(buff, &FontRobotoBold40, frame_buffer, 228, 90, EPD_COLOR_BLACK, false);
 
     sprintf(buff, "%i.%i%%", SENSOR_VAL_FORMAT_SHORT(hum));
-    epd_draw_string(buff, &FontRobotoBold40, frame_buffer, 242, 160, EPD_COLOR_BLACK, false);
+    epd_draw_string(buff, &FontRobotoBold40, frame_buffer, 228, 160, EPD_COLOR_BLACK, false);
 }
 
 int initialize(void)
