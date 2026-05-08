@@ -9,7 +9,7 @@
 
 #include "sensor.h"
 
-LOG_MODULE_REGISTER(bm280, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(bme280, LOG_LEVEL_INF);
 
 static const struct device* const bme280_dev = DEVICE_DT_GET(DT_NODELABEL(bme280_dev));
 SENSOR_DT_READ_IODEV(bme280_iodev, DT_NODELABEL(bme280_dev), {SENSOR_CHAN_AMBIENT_TEMP, 0}, {SENSOR_CHAN_HUMIDITY, 0},
