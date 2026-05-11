@@ -4,6 +4,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define BT_CENTRAL_SCAN_TX_POWER_LEVEL_DB 0
+#define BT_CENTRAL_CONN_TX_POWER_LEVEL_DB 8
+
 int bt_central_start_scan(void);
 
 typedef void (*device_battery_level_callback_t)(uint8_t value);

@@ -4,6 +4,7 @@
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/hci.h>
+#include <zephyr/bluetooth/hci_vs.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/byteorder.h>
@@ -510,9 +511,43 @@ static void device_found(const bt_addr_le_t* addr, int8_t rssi, uint8_t type, st
     }
 }
 
+int bt_set_tx_power(uint8_t handle_type, uint16_t handle, int8_t tx_pwr_lvl)
+{
+    struct bt_hci_cp_vs_write_tx_power_level* cp;
+    struct bt_hci_rp_vs_write_tx_power_level* rp;
+    struct net_buf *buf, *rsp = NULL;
+    int err;
+
+    buf = bt_hci_cmd_alloc(K_FOREVER);
+    if (!buf) {
+        LOG_ERR("Unable to allocate command buffer");
+        return -ENOMEM;
+    }
+
+    cp = net_buf_add(buf, sizeof(*cp));
+    cp->handle = sys_cpu_to_le16(handle);
+    cp->handle_type = handle_type;
+    cp->tx_power_level = tx_pwr_lvl;
+
+    err = bt_hci_cmd_send_sync(BT_HCI_OP_VS_WRITE_TX_POWER_LEVEL, buf, &rsp);
+    if (err) {
+        LOG_ERR("Set Tx power err (err %d)", err);
+        return err;
+    }
+
+    rp = (void*)rsp->data;
+    LOG_INF("Actual Tx Power: %d", rp->selected_tx_power);
+
+    net_buf_unref(rsp);
+
+    return 0;
+}
+
 static void connected(struct bt_conn* conn, uint8_t conn_err)
 {
+    static uint16_t conn_handle;
     char addr[BT_ADDR_LE_STR_LEN];
+    int err;
 
     bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 
@@ -529,6 +564,18 @@ static void connected(struct bt_conn* conn, uint8_t conn_err)
     LOG_INF("Connected: %s", addr);
     if (connection_callback != NULL) {
         connection_callback(true);
+    }
+
+    err = bt_hci_get_conn_handle(conn, &conn_handle);
+    if (err) {
+        LOG_INF("Unable to get connection handle (err %d)", err);
+        return;
+    }
+
+    err = bt_set_tx_power(BT_HCI_VS_LL_HANDLE_TYPE_CONN, conn_handle, BT_CENTRAL_CONN_TX_POWER_LEVEL_DB);
+    if (err) {
+        LOG_INF("Unable to set conn TX power (err %d)", err);
+        return;
     }
 
     if (conn == default_conn) {
@@ -569,6 +616,12 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 int bt_central_start_scan(void)
 {
     int err;
+
+    err = bt_set_tx_power(BT_HCI_VS_LL_HANDLE_TYPE_SCAN, 0, BT_CENTRAL_SCAN_TX_POWER_LEVEL_DB);
+    if (err) {
+        LOG_INF("Unable to set scan TX power (err %d)", err);
+        return err;
+    }
 
     struct bt_le_scan_param scan_param = {
         .type = BT_LE_SCAN_TYPE_ACTIVE,
