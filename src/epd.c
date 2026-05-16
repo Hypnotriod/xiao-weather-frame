@@ -452,7 +452,7 @@ void epd_draw_image(const uint8_t* image, uint8_t* buffer, uint16_t width, uint1
                 bkg = (img_byte_x + 1) * 8 > width ? (0xFF << (8 - (width % 8))) : 0xFF;
                 *(uint16_t*)mask_bkg = bkg << (8 - (x % 8));
             }
-            if (pixel_x < EPD_WIDTH || pixel_x >= 0) {
+            if (pixel_x < EPD_WIDTH && pixel_x >= 0) {
                 if (color == EPD_COLOR_BLACK) {
                     if (!transparent)
                         buffer[byte_offset] |= mask_bkg[1];
@@ -465,7 +465,7 @@ void epd_draw_image(const uint8_t* image, uint8_t* buffer, uint16_t width, uint1
             }
             pixel_x += 8;
             byte_offset += 1;
-            if (pixel_x < EPD_WIDTH || pixel_x >= 0) {
+            if (pixel_x < EPD_WIDTH && pixel_x >= 0) {
                 if (color == EPD_COLOR_BLACK) {
                     if (!transparent)
                         buffer[byte_offset] |= mask_bkg[0];
