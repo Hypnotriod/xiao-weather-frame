@@ -435,6 +435,7 @@ void epd_draw_image(const uint8_t* image, uint8_t* buffer, uint16_t width, uint1
                     epd_color_t color, bool transparent)
 {
     int16_t img_byte_x, img_y, pixel_x, byte_offset;
+    int16_t x_shift = x < 0 ? 8 + (x % 8) : 8 - (x % 8);
     uint8_t img_bytes_width = ((width - 1) / 8 + 1);
     uint8_t mask[2];
     uint8_t mask_bkg[2];
@@ -447,10 +448,10 @@ void epd_draw_image(const uint8_t* image, uint8_t* buffer, uint16_t width, uint1
             if (byte_offset >= EPD_FRAME_BUFFER_SIZE || byte_offset < 0) {
                 continue;
             }
-            *(uint16_t*)mask = image[img_byte_x + img_y * img_bytes_width] << (8 - (x % 8));
+            *(uint16_t*)mask = image[img_byte_x + img_y * img_bytes_width] << x_shift;
             if (!transparent) {
                 bkg = (img_byte_x + 1) * 8 > width ? (0xFF << (8 - (width % 8))) : 0xFF;
-                *(uint16_t*)mask_bkg = bkg << (8 - (x % 8));
+                *(uint16_t*)mask_bkg = bkg << x_shift;
             }
             if (pixel_x < EPD_WIDTH && pixel_x >= 0) {
                 if (color == EPD_COLOR_BLACK) {
@@ -463,10 +464,8 @@ void epd_draw_image(const uint8_t* image, uint8_t* buffer, uint16_t width, uint1
                     buffer[byte_offset] |= mask[1];
                 }
             }
-            if (byte_offset != 0 || pixel_x >= 0) {
-                byte_offset += 1;
-            }
             pixel_x += 8;
+            byte_offset += 1;
             if (pixel_x < EPD_WIDTH && pixel_x >= 0) {
                 if (color == EPD_COLOR_BLACK) {
                     if (!transparent)
