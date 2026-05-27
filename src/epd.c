@@ -463,10 +463,10 @@ void epd_draw_image(const uint8_t* image, uint8_t* buffer, uint16_t width, uint1
                     buffer[byte_offset] |= mask[1];
                 }
             }
-            pixel_x += 8;
-            if (pixel_x >= 8) {
+            if (byte_offset != 0 || pixel_x >= 0) {
                 byte_offset += 1;
             }
+            pixel_x += 8;
             if (pixel_x < EPD_WIDTH && pixel_x >= 0) {
                 if (color == EPD_COLOR_BLACK) {
                     if (!transparent)
