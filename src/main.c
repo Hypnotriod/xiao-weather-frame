@@ -12,15 +12,7 @@
 #include "icons.h"
 #include "sensor.h"
 
-#define EPD_MAX_UPDATE_DELAY_MS 30000
-#define EPD_MIN_UPDATE_DELAY_MS 2000
-#define CONNECTION_LED_BLINK_RATE 4
-#define SAMPLING_INTERVAL_MS 15000
-#define PRESSURE_OFFSET_HPA 37
-
 LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
-
-static const struct gpio_dt_spec led0 = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
 
 static uint8_t frame_buffer[EPD_FRAME_BUFFER_SIZE] = {0};
 
@@ -131,9 +123,11 @@ static void remote_pressure_callback(int16_t value)
 
 static void remote_connection_callback(bool connected)
 {
+#if CONFIG_BT_CENTRAL_DEVICE_SUBSCRIBE
     if (!connected) {
         remote_values_ready_mask = 0;
     }
+#endif
 }
 
 static void draw_static_icons(void)
@@ -173,7 +167,7 @@ static void draw_remote_values(void)
     sprintf(buff, "%3i.%i%%", SENSOR_VAL_FORMAT_SHORT(hum));
     epd_draw_string(buff, &FontRobotoBold40, frame_buffer, 21, 160, EPD_COLOR_BLACK, false);
 
-    sprintf(buff, "%4ihPa", press + PRESSURE_OFFSET_HPA);
+    sprintf(buff, "%4ihPa", press + CONFIG_PRESSURE_OFFSET_HPA);
     epd_draw_string(buff, &FontRobotoBold40, frame_buffer, 90, 230, EPD_COLOR_BLACK, false);
 }
 
@@ -201,12 +195,6 @@ int initialize(void)
     err = bt_enable(NULL);
     if (err) {
         LOG_ERR("Unable to initialize Bluetooth (err %d)", err);
-        return err;
-    }
-
-    err = gpio_pin_configure_dt(&led0, GPIO_OUTPUT_INACTIVE);
-    if (err) {
-        LOG_ERR("LED 0 pin configure failed (err %d)", err);
         return err;
     }
 
@@ -248,7 +236,7 @@ int initialize(void)
         LOG_ERR("Failed to read bme280 sensor data (error %d)", err);
         return err;
     }
-    bme280_start_sampling(SAMPLING_INTERVAL_MS);
+    bme280_start_sampling(CONFIG_SAMPLING_INTERVAL_LOCAL_MS);
 
     local_battery_is_charging = battery_is_charging();
     err = local_battery_voltage_sample_once();
@@ -256,7 +244,7 @@ int initialize(void)
         LOG_ERR("Failed to sample battery voltage (error %d)", err);
         return err;
     }
-    battery_start_sampling(SAMPLING_INTERVAL_MS);
+    battery_start_sampling(CONFIG_SAMPLING_INTERVAL_LOCAL_MS);
 
     bt_central_register_battery_level_callback(remote_battery_level_callback);
     bt_central_register_temperature_callback(remote_temperature_callback);
@@ -272,7 +260,10 @@ int main(void)
 {
     int err;
     int epd_update_ticker = 0;
-    bool connected = false;
+#ifndef CONFIG_BT_CENTRAL_DEVICE_SUBSCRIBE
+    int bt_restart_scan_ticker = CONFIG_SAMPLING_INTERVAL_REMOTE_MS / CONFIG_EPD_MIN_UPDATE_DELAY_MS;
+#endif
+    bool ready = false;
     bool charging = false;
     bool can_display_remote_values = false;
     bool remote_values_are_ready = false;
@@ -287,8 +278,8 @@ int main(void)
         if (remote_values_are_ready) {
             can_display_remote_values = true;
         }
-        if (connected != remote_values_are_ready) {
-            connected = remote_values_are_ready;
+        if (ready != remote_values_are_ready) {
+            ready = remote_values_are_ready;
             epd_update_ticker = 0;
         }
         if (charging != local_battery_is_charging) {
@@ -296,7 +287,7 @@ int main(void)
             epd_update_ticker = 0;
         }
 
-        if (epd_update_ticker == 0) {
+        if (epd_update_ticker <= 0) {
             if (epd_init()) {
                 LOG_ERR("Unable to initialize e-Paper display");
                 return -EIO;
@@ -307,7 +298,7 @@ int main(void)
             }
             draw_local_values();
             draw_static_icons();
-            if (!connected) {
+            if (!ready) {
                 draw_connection_icon();
             }
             if (charging) {
@@ -315,18 +306,19 @@ int main(void)
             }
             epd_display(frame_buffer);
             epd_sleep();
-            epd_update_ticker = EPD_MAX_UPDATE_DELAY_MS / EPD_MIN_UPDATE_DELAY_MS;
+            epd_update_ticker = CONFIG_EPD_MAX_UPDATE_DELAY_MS / CONFIG_EPD_MIN_UPDATE_DELAY_MS;
         }
 
-        if (!connected) {
-            for (int i = 0; i < CONNECTION_LED_BLINK_RATE; i++) {
-                gpio_pin_toggle_dt(&led0);
-                k_msleep(EPD_MIN_UPDATE_DELAY_MS / CONNECTION_LED_BLINK_RATE);
-            }
-        } else {
-            gpio_pin_set_dt(&led0, 0);
-            k_msleep(EPD_MIN_UPDATE_DELAY_MS);
+#ifndef CONFIG_BT_CENTRAL_DEVICE_SUBSCRIBE
+        if (!bt_central_discovery_in_progress() && (bt_restart_scan_ticker <= 0 || !remote_values_are_ready)) {
+            bt_central_start_scan();
+            remote_values_ready_mask = 0;
+            bt_restart_scan_ticker = CONFIG_SAMPLING_INTERVAL_REMOTE_MS / CONFIG_EPD_MIN_UPDATE_DELAY_MS;
         }
+        bt_restart_scan_ticker--;
+#endif
+
+        k_msleep(CONFIG_EPD_MIN_UPDATE_DELAY_MS);
         epd_update_ticker--;
     }
 

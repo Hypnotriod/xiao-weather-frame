@@ -15,6 +15,7 @@ typedef void (*device_humidity_callback_t)(int16_t value);
 typedef void (*device_pressure_callback_t)(int16_t value);
 typedef void (*device_connection_callback_t)(bool connected);
 
+bool bt_central_discovery_in_progress(void);
 void bt_central_register_battery_level_callback(device_battery_level_callback_t callback);
 void bt_central_register_temperature_callback(device_temperature_callback_t callback);
 void bt_central_register_humidity_callback(device_humidity_callback_t callback);

@@ -1,0 +1,28 @@
+source "Kconfig.zephyr"
+
+menu "XIAO Sense Weather Display Frame configuration"
+
+config BT_CENTRAL_DEVICE_SUBSCRIBE
+    bool "Subscribe to device attribute notifications"
+    default y
+
+config EPD_MAX_UPDATE_DELAY_MS 
+    int "EPD maximum update delay in milliseconds"
+    default 60000
+
+config EPD_MIN_UPDATE_DELAY_MS
+    int "EPD minimum update delay in milliseconds"
+    default 5000
+
+config SAMPLING_INTERVAL_REMOTE_MS
+    int "Remote BT device sampling interval in milliseconds"
+    default 300000
+
+config SAMPLING_INTERVAL_LOCAL_MS
+    int "Onboard sensors sampling interval in milliseconds"
+    default 30000
+
+config PRESSURE_OFFSET_HPA 
+    int "Pressure offset in hPa"
+    default 37
+endmenu

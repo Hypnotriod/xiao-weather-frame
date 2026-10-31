@@ -19,15 +19,19 @@ static const struct bt_uuid* UUID_BAS_BATTERY_LEVEL = BT_UUID_BAS_BATTERY_LEVEL;
 static const struct bt_uuid* UUID_TEMPERATURE = BT_UUID_TEMPERATURE;
 static const struct bt_uuid* UUID_HUMIDITY = BT_UUID_HUMIDITY;
 static const struct bt_uuid* UUID_PRESSURE = BT_UUID_PRESSURE;
+#if CONFIG_BT_CENTRAL_DEVICE_SUBSCRIBE
 static const struct bt_uuid* UUID_GATT_CCC = BT_UUID_GATT_CCC;
+#endif
 
 static int discover_step = 0;
 static struct bt_conn* default_conn;
 static struct bt_gatt_discover_params discover_params;
+#if CONFIG_BT_CENTRAL_DEVICE_SUBSCRIBE
 static struct bt_gatt_subscribe_params subscribe_battery_level_params;
 static struct bt_gatt_subscribe_params subscribe_temperature_params;
 static struct bt_gatt_subscribe_params subscribe_humidity_params;
 static struct bt_gatt_subscribe_params subscribe_pressure_params;
+#endif
 static struct bt_gatt_read_params read_battery_level_params;
 static struct bt_gatt_read_params read_temperature_params;
 static struct bt_gatt_read_params read_humidity_params;
@@ -38,6 +42,8 @@ static device_temperature_callback_t temperature_callback = NULL;
 static device_humidity_callback_t humidity_callback = NULL;
 static device_pressure_callback_t pressure_callback = NULL;
 static device_connection_callback_t connection_callback = NULL;
+
+static bool discovery_in_progress = false;
 
 static void discover_ess(void);
 static uint8_t discover_ess_func(struct bt_conn* conn, const struct bt_gatt_attr* attr,
@@ -65,6 +71,7 @@ static uint8_t read_battery_level_func(struct bt_conn* conn, uint8_t err, struct
     return BT_GATT_ITER_STOP;
 }
 
+#if CONFIG_BT_CENTRAL_DEVICE_SUBSCRIBE
 static uint8_t notify_battery_level_func(struct bt_conn* conn, struct bt_gatt_subscribe_params* params,
                                          const void* data, uint16_t length)
 {
@@ -83,6 +90,7 @@ static uint8_t notify_battery_level_func(struct bt_conn* conn, struct bt_gatt_su
 
     return BT_GATT_ITER_CONTINUE;
 }
+#endif
 
 static uint8_t read_temperature_func(struct bt_conn* conn, uint8_t err, struct bt_gatt_read_params* params,
                                      const void* data, uint16_t length)
@@ -103,6 +111,7 @@ static uint8_t read_temperature_func(struct bt_conn* conn, uint8_t err, struct b
     return BT_GATT_ITER_STOP;
 }
 
+#if CONFIG_BT_CENTRAL_DEVICE_SUBSCRIBE
 static uint8_t notify_temperature_func(struct bt_conn* conn, struct bt_gatt_subscribe_params* params, const void* data,
                                        uint16_t length)
 {
@@ -121,6 +130,7 @@ static uint8_t notify_temperature_func(struct bt_conn* conn, struct bt_gatt_subs
 
     return BT_GATT_ITER_CONTINUE;
 }
+#endif
 
 static uint8_t read_humidity_func(struct bt_conn* conn, uint8_t err, struct bt_gatt_read_params* params,
                                   const void* data, uint16_t length)
@@ -141,6 +151,7 @@ static uint8_t read_humidity_func(struct bt_conn* conn, uint8_t err, struct bt_g
     return BT_GATT_ITER_STOP;
 }
 
+#if CONFIG_BT_CENTRAL_DEVICE_SUBSCRIBE
 static uint8_t notify_humidity_func(struct bt_conn* conn, struct bt_gatt_subscribe_params* params, const void* data,
                                     uint16_t length)
 {
@@ -159,6 +170,7 @@ static uint8_t notify_humidity_func(struct bt_conn* conn, struct bt_gatt_subscri
 
     return BT_GATT_ITER_CONTINUE;
 }
+#endif
 
 static uint8_t read_pressure_func(struct bt_conn* conn, uint8_t err, struct bt_gatt_read_params* params,
                                   const void* data, uint16_t length)
@@ -176,9 +188,14 @@ static uint8_t read_pressure_func(struct bt_conn* conn, uint8_t err, struct bt_g
 
     LOG_INF("[READ] Pressure: %ihPa", pressure);
 
+#ifndef CONFIG_BT_CENTRAL_DEVICE_SUBSCRIBE
+    bt_conn_disconnect(conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+#endif
+
     return BT_GATT_ITER_STOP;
 }
 
+#if CONFIG_BT_CENTRAL_DEVICE_SUBSCRIBE
 static uint8_t notify_pressure_func(struct bt_conn* conn, struct bt_gatt_subscribe_params* params, const void* data,
                                     uint16_t length)
 {
@@ -197,6 +214,7 @@ static uint8_t notify_pressure_func(struct bt_conn* conn, struct bt_gatt_subscri
 
     return BT_GATT_ITER_CONTINUE;
 }
+#endif
 
 /* Discover BAS */
 
@@ -230,7 +248,7 @@ static uint8_t discover_bas_func(struct bt_conn* conn, const struct bt_gatt_attr
         params->start_handle = attr->handle + 1;
         params->type = BT_GATT_DISCOVER_CHARACTERISTIC;
 
-        discover_step++;
+        discover_step = 1;
         err = bt_gatt_discover(conn, params);
         if (err) {
             LOG_ERR("Discover Battery Level failed (err %d)", err);
@@ -248,12 +266,13 @@ static uint8_t discover_bas_func(struct bt_conn* conn, const struct bt_gatt_attr
             return BT_GATT_ITER_STOP;
         }
 
+#if CONFIG_BT_CENTRAL_DEVICE_SUBSCRIBE
         params->uuid = UUID_GATT_CCC;
         params->start_handle = attr->handle + 1;
         params->type = BT_GATT_DISCOVER_DESCRIPTOR;
         subscribe_battery_level_params.value_handle = bt_gatt_attr_value_handle(attr);
 
-        discover_step++;
+        discover_step = 2;
         err = bt_gatt_discover(conn, params);
         if (err) {
             LOG_ERR("Discover Battery Level CCC failed (err %d)", err);
@@ -270,6 +289,7 @@ static uint8_t discover_bas_func(struct bt_conn* conn, const struct bt_gatt_attr
             return BT_GATT_ITER_STOP;
         }
         LOG_INF("[SUBSCRIBED] Battery Level");
+#endif
 
         discover_ess();
     }
@@ -309,7 +329,7 @@ static uint8_t discover_ess_func(struct bt_conn* conn, const struct bt_gatt_attr
         params->start_handle = attr->handle + 1;
         params->type = BT_GATT_DISCOVER_CHARACTERISTIC;
 
-        discover_step++;
+        discover_step = 1;
         err = bt_gatt_discover(conn, params);
         if (err) {
             LOG_ERR("Discover Temperature failed (err %d)", err);
@@ -327,12 +347,13 @@ static uint8_t discover_ess_func(struct bt_conn* conn, const struct bt_gatt_attr
             return BT_GATT_ITER_STOP;
         }
 
+#if CONFIG_BT_CENTRAL_DEVICE_SUBSCRIBE
         params->uuid = UUID_GATT_CCC;
         params->start_handle = attr->handle + 1;
         params->type = BT_GATT_DISCOVER_DESCRIPTOR;
         subscribe_temperature_params.value_handle = bt_gatt_attr_value_handle(attr);
 
-        discover_step++;
+        discover_step = 2;
         err = bt_gatt_discover(conn, params);
         if (err) {
             LOG_ERR("Discover Temperature CCC failed (err %d)", err);
@@ -349,12 +370,13 @@ static uint8_t discover_ess_func(struct bt_conn* conn, const struct bt_gatt_attr
             return BT_GATT_ITER_STOP;
         }
         LOG_INF("[SUBSCRIBED] Temperature");
+#endif
 
         params->uuid = UUID_HUMIDITY;
         params->start_handle = BT_ATT_FIRST_ATTRIBUTE_HANDLE;
         params->type = BT_GATT_DISCOVER_CHARACTERISTIC;
 
-        discover_step++;
+        discover_step = 3;
         err = bt_gatt_discover(conn, params);
         if (err) {
             LOG_ERR("Discover Humidity failed (err %d)", err);
@@ -372,12 +394,13 @@ static uint8_t discover_ess_func(struct bt_conn* conn, const struct bt_gatt_attr
             return BT_GATT_ITER_STOP;
         }
 
+#if CONFIG_BT_CENTRAL_DEVICE_SUBSCRIBE
         params->uuid = UUID_GATT_CCC;
         params->start_handle = attr->handle + 1;
         params->type = BT_GATT_DISCOVER_DESCRIPTOR;
         subscribe_humidity_params.value_handle = bt_gatt_attr_value_handle(attr);
 
-        discover_step++;
+        discover_step = 4;
         err = bt_gatt_discover(conn, params);
         if (err) {
             LOG_ERR("Discover Humidity CCC failed (err %d)", err);
@@ -395,11 +418,12 @@ static uint8_t discover_ess_func(struct bt_conn* conn, const struct bt_gatt_attr
         }
         LOG_INF("[SUBSCRIBED] Humidity");
 
+#endif
         params->uuid = UUID_PRESSURE;
         params->start_handle = BT_ATT_FIRST_ATTRIBUTE_HANDLE;
         params->type = BT_GATT_DISCOVER_CHARACTERISTIC;
 
-        discover_step++;
+        discover_step = 5;
         err = bt_gatt_discover(conn, params);
         if (err) {
             LOG_ERR("Discover Pressure failed (err %d)", err);
@@ -417,12 +441,13 @@ static uint8_t discover_ess_func(struct bt_conn* conn, const struct bt_gatt_attr
             return BT_GATT_ITER_STOP;
         }
 
+#if CONFIG_BT_CENTRAL_DEVICE_SUBSCRIBE
         params->uuid = UUID_GATT_CCC;
         params->start_handle = attr->handle + 1;
         params->type = BT_GATT_DISCOVER_DESCRIPTOR;
         subscribe_pressure_params.value_handle = bt_gatt_attr_value_handle(attr);
 
-        discover_step++;
+        discover_step = 6;
         err = bt_gatt_discover(conn, params);
         if (err) {
             LOG_ERR("Discover Pressure CCC failed (err %d)", err);
@@ -439,6 +464,7 @@ static uint8_t discover_ess_func(struct bt_conn* conn, const struct bt_gatt_attr
             return BT_GATT_ITER_STOP;
         }
         LOG_INF("[SUBSCRIBED] Pressure");
+#endif
     }
 
     return BT_GATT_ITER_STOP;
@@ -604,7 +630,10 @@ static void disconnected(struct bt_conn* conn, uint8_t reason)
 
 static void recycled()
 {
+    discovery_in_progress = false;
+#if CONFIG_BT_CENTRAL_DEVICE_SUBSCRIBE
     bt_central_start_scan();
+#endif
 }
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {
@@ -616,6 +645,8 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 int bt_central_start_scan(void)
 {
     int err;
+
+    discovery_in_progress = true;
 
     err = bt_set_tx_power(BT_HCI_VS_LL_HANDLE_TYPE_SCAN, 0, BT_CENTRAL_SCAN_TX_POWER_LEVEL_DB);
     if (err) {
@@ -638,6 +669,11 @@ int bt_central_start_scan(void)
     LOG_INF("Scanning started");
 
     return 0;
+}
+
+bool bt_central_discovery_in_progress(void)
+{
+    return discovery_in_progress;
 }
 
 void bt_central_register_battery_level_callback(device_battery_level_callback_t callback)
