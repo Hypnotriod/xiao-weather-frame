@@ -261,7 +261,7 @@ int main(void)
     int err;
     int epd_update_ticker = 0;
 #ifndef CONFIG_BT_CENTRAL_DEVICE_SUBSCRIBE
-    int bt_restart_scan_ticker = CONFIG_SAMPLING_INTERVAL_REMOTE_MS / CONFIG_EPD_MIN_UPDATE_DELAY_MS;
+    int bt_start_scan_ticker = CONFIG_SAMPLING_INTERVAL_REMOTE_MS / CONFIG_EPD_MIN_UPDATE_DELAY_MS;
 #endif
     bool ready = false;
     bool charging = false;
@@ -310,16 +310,16 @@ int main(void)
         }
 
 #ifndef CONFIG_BT_CENTRAL_DEVICE_SUBSCRIBE
-        if (!bt_central_discovery_in_progress() && (bt_restart_scan_ticker <= 0 || !remote_values_are_ready)) {
+        if (!bt_central_discovery_in_progress() && bt_start_scan_ticker <= 0) {
             bt_central_start_scan();
             remote_values_ready_mask = 0;
-            bt_restart_scan_ticker = CONFIG_SAMPLING_INTERVAL_REMOTE_MS / CONFIG_EPD_MIN_UPDATE_DELAY_MS;
+            bt_start_scan_ticker = CONFIG_SAMPLING_INTERVAL_REMOTE_MS / CONFIG_EPD_MIN_UPDATE_DELAY_MS;
         }
-        bt_restart_scan_ticker--;
+        bt_start_scan_ticker--;
 #endif
+        epd_update_ticker--;
 
         k_msleep(CONFIG_EPD_MIN_UPDATE_DELAY_MS);
-        epd_update_ticker--;
     }
 
     return 0;

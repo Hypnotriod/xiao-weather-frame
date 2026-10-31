@@ -646,8 +646,6 @@ int bt_central_start_scan(void)
 {
     int err;
 
-    discovery_in_progress = true;
-
     err = bt_set_tx_power(BT_HCI_VS_LL_HANDLE_TYPE_SCAN, 0, BT_CENTRAL_SCAN_TX_POWER_LEVEL_DB);
     if (err) {
         LOG_INF("Unable to set scan TX power (err %d)", err);
@@ -667,6 +665,7 @@ int bt_central_start_scan(void)
     }
 
     LOG_INF("Scanning started");
+    discovery_in_progress = true;
 
     return 0;
 }
