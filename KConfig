@@ -3,7 +3,7 @@ source "Kconfig.zephyr"
 menu "XIAO Sense Weather Display Frame configuration"
 
 config BT_CENTRAL_DEVICE_SUBSCRIBE
-    bool "Subscribe to device attribute notifications"
+    bool "Subscribe to device attribute notifications; otherwise, use periodic polling"
     default y
 
 config EPD_MAX_UPDATE_DELAY_MS 
@@ -15,7 +15,7 @@ config EPD_MIN_UPDATE_DELAY_MS
     default 5000
 
 config SAMPLING_INTERVAL_REMOTE_MS
-    int "Remote BT device sampling interval in milliseconds"
+    int "Remote BT device periodic polling interval in milliseconds"
     default 300000
 
 config SAMPLING_INTERVAL_LOCAL_MS
