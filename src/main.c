@@ -251,9 +251,6 @@ int initialize(void)
     bt_central_register_humidity_callback(remote_humidity_callback);
     bt_central_register_pressure_callback(remote_pressure_callback);
     bt_central_register_connection_callback(remote_connection_callback);
-#if CONFIG_BT_CENTRAL_DEVICE_SUBSCRIBE
-    bt_central_start_scan();
-#endif
 
     return 0;
 }
@@ -274,6 +271,10 @@ int main(void)
     if (err) {
         return err;
     }
+
+#if CONFIG_BT_CENTRAL_DEVICE_SUBSCRIBE
+    bt_central_start_scan();
+#endif
 
     while (1) {
         remote_values_are_ready = REMOTE_VALUES_ARE_READY();
@@ -312,7 +313,7 @@ int main(void)
         }
 
 #ifndef CONFIG_BT_CENTRAL_DEVICE_SUBSCRIBE
-        if (!bt_central_discovery_in_progress() && (bt_start_scan_ticker <= 0 || !ready)) {
+        if (!bt_central_discovery_in_progress() && (bt_start_scan_ticker <= 0 || !REMOTE_VALUES_ARE_READY())) {
             bt_central_start_scan();
             remote_values_ready_mask = 0;
             bt_start_scan_ticker = CONFIG_SAMPLING_INTERVAL_REMOTE_MS / CONFIG_EPD_MIN_UPDATE_DELAY_MS;
